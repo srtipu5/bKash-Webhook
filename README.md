@@ -43,3 +43,10 @@ You can now copy paste whole code from this project 'WebhookController.php'
   "UnsubscribeURL" : "https://sns.ap-southeast-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:ap-southeast-1:797962984373:bpt_01953337616:f6c1cafb-6029-4dbf-9003-6ff2b23e9757"
 }
 ```
+# bKash Requirement
+```
+(1) Merchant Name
+(2) Merchant wallet Number(s)
+(3) Notification channel email address
+(4) Webhook Endpoint
+```

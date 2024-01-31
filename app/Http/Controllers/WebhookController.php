@@ -74,9 +74,7 @@ class WebhookController extends Controller
         $payload = json_decode($request->getContent(), true);
         $this->writeLog('Payload', $payload);
 
-        // headers
-        $messageType = $request->server('HTTP_X_AMZ_SNS_MESSAGE_TYPE');
-        // //verify signature
+        //verify signature
         $signingCertURL = $payload['SigningCertURL'];
         $certUrlValidation = $this->validateUrl($signingCertURL);
 
@@ -85,25 +83,29 @@ class WebhookController extends Controller
 
             $signature = $payload['Signature'];
             $signatureDecoded = base64_decode($signature);
-
             $content = $this->getStringToSign($payload);
+
+            // Get Message Type
+            $messageType = $payload['Type'];
 
             if ($content != '') {
                 $verified = openssl_verify($content, $signatureDecoded, $pubCert, OPENSSL_ALGO_SHA1);
-                if ($verified == '1') {
+                if ($verified == 1) {
                     if ($messageType == "SubscriptionConfirmation") {
-
                         $subscribeURL = $payload['SubscribeURL'];
-                        $this->writeLog('Subscribe', $subscribeURL);
-                        //subscribe
-                        $url = curl_init($subscribeURL);
-                        curl_exec($url);
+
+                        $ch = curl_init();
+                        // Set the cURL options
+                        curl_setopt($ch, CURLOPT_URL, $subscribeURL);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        $response = curl_exec($ch);
+                        $this->writeLog('Subscribe-Result', array($response));
 
                     } else if ($messageType == "Notification") {
 
                         $notificationData = $payload['Message'];
                         // save notificationData in your DB
-                        $this->writeLog('NotificationData-Message', $notificationData);
+                        $this->writeLog('NotificationData-Message', array($notificationData));
 
                     }
                 }

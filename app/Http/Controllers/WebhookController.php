@@ -17,7 +17,7 @@ class WebhookController extends Controller
         Log::info($logName, $logData);
     }
 
-    function get_content($URL)
+    public function get_content($URL)
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -27,7 +27,7 @@ class WebhookController extends Controller
         return $data;
     }
 
-    function getStringToSign($message)
+    public function getStringToSign($message)
     {
         $signableKeys = [
             'Message',
@@ -43,19 +43,24 @@ class WebhookController extends Controller
         $stringToSign = '';
 
         if ($message['SignatureVersion'] !== '1') {
-            $errorLog = "The SignatureVersion \"{$message['SignatureVersion']}\" is not supported.";
-            $this->writeLog('SignatureVersion-Error', [$errorLog]);
-        } else {
+            $errorLog =  "The SignatureVersion \"{$message['SignatureVersion']}\" is not supported.";
+            $this->writeLog('SignatureVersion-Error', $errorLog);
+        }
+        else{
             foreach ($signableKeys as $key) {
                 if (isset($message[$key])) {
-                    $stringToSign .= "{$key}\n{$message[$key]}\n";
+                    if (is_array($message[$key])) {
+                        $stringToSign .= "{$key}\n" . implode("\n", $message[$key]) . "\n";
+                    } else {
+                        $stringToSign .= "{$key}\n{$message[$key]}\n";
+                    }
                 }
             }
+            
             $this->writeLog('StringToSign', [$stringToSign]);
         }
         return $stringToSign;
     }
-
     function validateUrl($url)
     {
         $defaultHostPattern = '/^sns\.[a-zA-Z0-9\-]{3,}\.amazonaws\.com(\.cn)?$/';
@@ -79,7 +84,7 @@ class WebhookController extends Controller
         $signingCertURL = $payload['SigningCertURL'];
         $certUrlValidation = $this->validateUrl($signingCertURL);
 
-        if ($certUrlValidation == '1') {
+        if ($certUrlValidation) {
             $pubCert = $this->get_content($signingCertURL);
             $signature = $payload['Signature'];
             $signatureDecoded = base64_decode($signature);
@@ -87,9 +92,10 @@ class WebhookController extends Controller
 
             // Get Message Type
             $messageType = $payload['Type'];
+           // return $messageType;
 
-            if ($content != '') {
-                $verified = 0;
+            if ($content) {
+                $verified = 1;
                 try {
                     $verified = openssl_verify($content, $signatureDecoded, $pubCert, OPENSSL_ALGO_SHA1);
                 } catch (\Exception $e) {
@@ -102,7 +108,6 @@ class WebhookController extends Controller
                         $subscribeURL = $payload['SubscribeURL'];
 
                         $ch = curl_init();
-                        // Set the cURL options
                         curl_setopt($ch, CURLOPT_URL, $subscribeURL);
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                         $response = curl_exec($ch);

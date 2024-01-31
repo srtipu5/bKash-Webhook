@@ -77,7 +77,8 @@ class WebhookController extends Controller
     {
         //payload
         $payload = json_decode($request->getContent(), true);
-        //return $payload;
+        if(!$payload)
+        return false;
         $this->writeLog('Payload', $payload);
 
         //verify signature

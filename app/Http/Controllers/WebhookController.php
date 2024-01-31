@@ -44,14 +44,14 @@ class WebhookController extends Controller
 
         if ($message['SignatureVersion'] !== '1') {
             $errorLog = "The SignatureVersion \"{$message['SignatureVersion']}\" is not supported.";
-            $this->writeLog('SignatureVersion-Error', array($errorLog));
+            $this->writeLog('SignatureVersion-Error', [$errorLog]);
         } else {
             foreach ($signableKeys as $key) {
                 if (isset($message[$key])) {
                     $stringToSign .= "{$key}\n{$message[$key]}\n";
                 }
             }
-            $this->writeLog('StringToSign', array($stringToSign));
+            $this->writeLog('StringToSign', [$stringToSign]);
         }
         return $stringToSign;
     }
@@ -72,6 +72,7 @@ class WebhookController extends Controller
     {
         //payload
         $payload = json_decode($request->getContent(), true);
+        //return $payload;
         $this->writeLog('Payload', $payload);
 
         //verify signature
@@ -80,7 +81,6 @@ class WebhookController extends Controller
 
         if ($certUrlValidation == '1') {
             $pubCert = $this->get_content($signingCertURL);
-
             $signature = $payload['Signature'];
             $signatureDecoded = base64_decode($signature);
             $content = $this->getStringToSign($payload);
@@ -89,7 +89,14 @@ class WebhookController extends Controller
             $messageType = $payload['Type'];
 
             if ($content != '') {
-                $verified = openssl_verify($content, $signatureDecoded, $pubCert, OPENSSL_ALGO_SHA1);
+                $verified = 0;
+                try {
+                    $verified = openssl_verify($content, $signatureDecoded, $pubCert, OPENSSL_ALGO_SHA1);
+                } catch (\Exception $e) {
+                    $this->writeLog('Openssl_error', ["message" => $e]);
+                    return "openssl_verify Exception";
+                }
+
                 if ($verified == 1) {
                     if ($messageType == "SubscriptionConfirmation") {
                         $subscribeURL = $payload['SubscribeURL'];
@@ -99,13 +106,13 @@ class WebhookController extends Controller
                         curl_setopt($ch, CURLOPT_URL, $subscribeURL);
                         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                         $response = curl_exec($ch);
-                        $this->writeLog('Subscribe-Result', array($response));
+                        $this->writeLog('Subscribe-Result', [$response]);
 
                     } else if ($messageType == "Notification") {
 
                         $notificationData = $payload['Message'];
                         // save notificationData in your DB
-                        $this->writeLog('NotificationData-Message', array($notificationData));
+                        $this->writeLog('NotificationData-Message', [$notificationData]);
 
                     }
                 }

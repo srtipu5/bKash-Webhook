@@ -96,7 +96,7 @@ class WebhookController extends Controller
            // return $messageType;
 
             if ($content) {
-                $verified = 1;
+                $verified = 0;
                 try {
                     $verified = openssl_verify($content, $signatureDecoded, $pubCert, OPENSSL_ALGO_SHA1);
                 } catch (\Exception $e) {
@@ -107,15 +107,10 @@ class WebhookController extends Controller
                 if ($verified == 1) {
                     if ($messageType == "SubscriptionConfirmation") {
                         $subscribeURL = $payload['SubscribeURL'];
-
-                        $ch = curl_init();
-                        curl_setopt($ch, CURLOPT_URL, $subscribeURL);
-                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                        $response = curl_exec($ch);
+                        $response = $this->get_content($subscribeURL);
                         $this->writeLog('Subscribe-Result', [$response]);
 
                     } else if ($messageType == "Notification") {
-
                         $notificationData = $payload['Message'];
                         // save notificationData in your DB
                         $this->writeLog('NotificationData-Message', [$notificationData]);
